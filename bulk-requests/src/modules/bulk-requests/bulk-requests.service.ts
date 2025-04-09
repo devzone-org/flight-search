@@ -28,57 +28,79 @@ export class BulkRequestsService {
   findAll() {
     return `This action returns all bulkRequests`;
   }
+//working for parallel request without loop
   async *matchingServicesGenerator(from: string, to: string) {
     const matchingAirlines: any[] = [];
-
+  
     const kuwaitMatches = this.kuwaitService.searchByFromTo(from, to);
     if (kuwaitMatches.length > 0) matchingAirlines.push(...kuwaitMatches);
-
+  
     const DubaiMatches = this.DubaiService.searchByFromTo(from, to);
     if (DubaiMatches.length > 0) matchingAirlines.push(...DubaiMatches);
-
+  
     const PIAMatches = this.PIAService.searchByFromTo(from, to);
     if (PIAMatches.length > 0) matchingAirlines.push(...PIAMatches);
-
+  
     const EithadMatches = this.EithadService.searchByFromTo(from, to);
     if (EithadMatches.length > 0) matchingAirlines.push(...EithadMatches);
-
+  
     const BlueMatches = this.BlueService.searchByFromTo(from, to);
     if (BlueMatches.length > 0) matchingAirlines.push(...BlueMatches);
+  
     if (matchingAirlines.length === 0) {
       yield { data: { error: 'No records found' } };
-      return; 
+      return;
     }
-    for (const item of matchingAirlines) {
+  
+    console.log(matchingAirlines);
+  
+  
+
+    const pendingPromises = matchingAirlines.map(async (item) => {
       const startTime = Date.now();
       const sleepTime = Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000;
-      await this.sleep(sleepTime);
-
+  
+      await this.sleep(sleepTime); 
+  
       try {
         const response = await axios.get(item.api);
         const responseTime = Date.now() - startTime;
-        yield {
-          data: {
-            source: item.name,
-            sleepTime,
-            responseTime,
-            apiFetchTime: responseTime - sleepTime,
-            apiResponse: response.data,
-          }
+        return {
+          source: item.name,
+          sleepTime,
+          responseTime,
+          apiFetchTime: responseTime - sleepTime,
+          apiResponse: response.data,
         };
       } catch (error) {
         const responseTime = Date.now() - startTime;
-        yield {
-          data: {
-            source: item.name,
-            sleepTime,
-            responseTime,
-            apiResponse: { error: error.message },
-          }
+        return {
+          source: item.name,
+          sleepTime,
+          responseTime,
+          apiFetchTime: responseTime - sleepTime,
+          apiResponse: { error: error.message },
         };
       }
+    });
+  
+    const promisesSet = new Set(pendingPromises);
+  
+    while (promisesSet.size > 0) {
+      const fastest = await Promise.race(promisesSet);
+  
+      for (const p of promisesSet) {
+        p.then((result) => {
+          if (result === fastest) {
+            promisesSet.delete(p);
+          }
+        });
+      }
+  
+      yield { data: fastest };
     }
   }
+  
 
   matchingServicesSSE(from: string, to: string): Observable<any> {
     return fromObservable(this.matchingServicesGenerator(from, to));
