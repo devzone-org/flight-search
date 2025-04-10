@@ -55,18 +55,59 @@ export class BulkRequestsService {
     console.log(matchingAirlines);
   
   
-
-    const pendingPromises = matchingAirlines.map(async (item) => {
+    //1 request for each service
+    // const pendingPromises = matchingAirlines.map(async (item) => {
+    //   const startTime = Date.now();
+    //   const sleepTime = Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000;
+  
+    //   await this.sleep(sleepTime); 
+  
+    //   try {
+    //     const response = await axios.get(item.api);
+    //     const responseTime = Date.now() - startTime;
+    //     return {
+    //       source: item.name,
+    //       sleepTime,
+    //       responseTime,
+    //       apiFetchTime: responseTime - sleepTime,
+    //       apiResponse: response.data,
+    //     };
+    //   } catch (error) {
+    //     const responseTime = Date.now() - startTime;
+    //     return {
+    //       source: item.name,
+    //       sleepTime,
+    //       responseTime,
+    //       apiFetchTime: responseTime - sleepTime,
+    //       apiResponse: { error: error.message },
+    //     };
+    //   }
+    // });
+  
+    //5 requests for each service
+    const pendingPromises: Promise<{
+      source: any;
+      request: number;
+      sleepTime: number;
+      responseTime: number;
+      apiFetchTime: number;
+      apiResponse: any;
+    }>[] = [];
+    
+for (const item of matchingAirlines) {
+  for (let i = 0; i < 5; i++) { 
+    const promise = (async () => {
       const startTime = Date.now();
       const sleepTime = Math.floor(Math.random() * (5000 - 1000 + 1)) + 1000;
   
-      await this.sleep(sleepTime); 
+      await this.sleep(sleepTime);
   
       try {
         const response = await axios.get(item.api);
         const responseTime = Date.now() - startTime;
         return {
           source: item.name,
+          request: i + 1,
           sleepTime,
           responseTime,
           apiFetchTime: responseTime - sleepTime,
@@ -76,14 +117,20 @@ export class BulkRequestsService {
         const responseTime = Date.now() - startTime;
         return {
           source: item.name,
+          request: i + 1,
           sleepTime,
           responseTime,
           apiFetchTime: responseTime - sleepTime,
           apiResponse: { error: error.message },
         };
       }
-    });
+    })();
   
+    pendingPromises.push(promise); 
+  }
+}
+
+
     const promisesSet = new Set(pendingPromises);
   
     while (promisesSet.size > 0) {

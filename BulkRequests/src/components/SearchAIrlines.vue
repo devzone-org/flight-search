@@ -87,6 +87,7 @@ console.log(`http://localhost:3001/bulk-requests/search?from=${from.value}&to=${
               <div><strong>Sleep Time:</strong> {{ res.sleepTime }}ms</div>
               <div><strong>Response Time:</strong> {{ res.responseTime }}ms</div>
               <div><strong>API Fetch Time:</strong> {{ res.apiFetchTime }}ms</div>
+              <div><strong>Request Number:</strong> {{ res.request }}</div>
               <div class="api-response">
                 <strong>API Response:</strong>
                 <pre class="response-pre">{{ JSON.stringify(res.apiResponse, null, 2) }}</pre>
